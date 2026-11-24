@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plinko Probability Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#1e0538;--card:#2c0f52;--ink:#fff;--mute:#dcc8f0;--acc:#ffd37a;--acc2:#ff7a59;--line:#ff2d95;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;padding:0 14px;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:20px auto;padding:16px;border:3px solid #ff2d95;border-radius:22px;box-shadow:0 0 10px #ff2d95,0 0 28px rgba(255,45,149,.75),0 0 60px rgba(255,45,149,.5),inset 0 0 16px rgba(255,45,149,.5);animation:glow 2.2s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 6px #ff2d95,0 0 16px rgba(255,45,149,.55),0 0 34px rgba(255,45,149,.3),inset 0 0 8px rgba(255,45,149,.3)}to{box-shadow:0 0 14px #ff2d95,0 0 40px rgba(255,45,149,.9),0 0 90px rgba(255,45,149,.65),inset 0 0 26px rgba(255,45,149,.6)}}
+@media (prefers-reduced-motion:reduce){main{animation:none}}
+h1{font-size:26px;margin:4px 0 2px}p.sub{margin:0 0 14px;color:var(--mute)}
+.card{background:var(--card);border:3px solid #ff2d95;box-shadow:0 0 14px rgba(255,45,149,.55);border-radius:14px;padding:14px;margin-bottom:12px}
+.step{font-weight:700;margin:0 0 8px}.step b{display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:var(--acc);color:#2a1040;margin-right:6px;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{flex:1;padding:10px 4px;font-size:16px;font-weight:600;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.seg button.on{border-color:var(--acc);background:var(--acc);color:#2a1040}
+.go{width:100%;padding:14px;font-size:20px;font-weight:800;border:3px solid #ff2d95;border-radius:12px;background:var(--bg);color:#fff;box-shadow:0 0 12px rgba(255,45,149,.6);cursor:pointer}
+.ghost{flex:1;padding:10px;border-radius:10px;border:2px solid var(--acc);background:transparent;color:var(--acc);font-weight:700;font-size:15px;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+.board{max-width:520px;margin:0 auto}
+.strip{position:relative;height:42px}
+.strip button{position:absolute;top:0;width:6.6%;height:38px;padding:0;font-size:15px;font-weight:800;border-radius:8px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.strip button.on{background:var(--acc2);border-color:var(--acc2);color:#fff}
+canvas{width:100%;display:block;border-radius:10px}
+#sum{font-weight:700;margin:8px 0 0;text-align:center}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:430px;text-align:center;font-size:14px}
+th,td{padding:6px 3px;border:1px solid var(--line)}th{color:var(--mute)}th small{font-weight:600}
+.note{color:var(--mute);font-size:14px;margin:8px 0 0}
+.layout{display:grid;grid-template-columns:minmax(250px,320px) 1fr;gap:16px;align-items:start}
+.panel{position:sticky;top:12px}
+#custom{width:100%;margin-top:8px;padding:10px;font-size:16px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+#custom::placeholder{color:var(--mute)}
+@media (max-width:700px){.layout{grid-template-columns:1fr}.panel{position:static}}
+</style></head><body><main>
+
+<div class="layout">
+<div class="card panel">
+<div class="row seg" id="nums"></div>
+<input id="custom" type="text" autocomplete="off" placeholder="Custom..">
+<div class="row seg" id="mode" style="margin-top:8px"></div>
+<button class="go" id="drop" style="margin-top:10px">Drop the balls!</button>
+<button class="ghost" id="skip" style="display:none;width:100%;margin-top:8px;border-color:#ff2d95;color:#fff;background:var(--bg);box-shadow:0 0 10px rgba(255,45,149,.5)">Skip</button>
+<button class="ghost" id="reset" style="width:100%;margin-top:8px;border-color:#ff2d95;color:#fff;background:var(--bg);box-shadow:0 0 10px rgba(255,45,149,.5)">Reset</button>
+</div>
+
+<div class="card">
+<div class="board">
+<div class="strip" id="strip"></div>
+<canvas id="cv" width="1472" height="2040"></canvas>
+</div>
+<p id="sum"></p>
+</div>
+</div>
+
+</main>
+<script>
+const ROWS=[[540,[265,378,490,605,715,825,937,1048,1158,1268]],[710,[210,323,437,548,660,768,877,987,1090,1200]],[875,[275,387,497,606,713,820,928,1035,1142,1248]],[1035,[225,335,445,553,658,767,870,975,1082,1187]],[1190,[180,287,395,500,607,710,815,920,1023,1127,1230]],[1340,[237,345,450,555,660,762,865,965,1068,1172,1275]],[1495,[295,400,505,608,710,810,912,1012,1115,1215]],[1630,[248,352,455,557,658,758,858,957,1058,1160]],[1790,[305,405,507,607,706,805,905,1005,1103,1200]],[1920,[262,360,460,558,657,755,853,953,1050,1145]],[2060,[315,413,512,607,706,805,900,995,1090,1185]]];
+const D=[325,480,635,805,965,1120],E=[185,...D,1280],PTS=[4,1,2,3,1,3,2],CW=1472,OY=400,CH=2040;
+const BETWEEN=ROWS[0][1].slice(0,-1).map((x,i)=>(x+ROWS[0][1][i+1])/2),ONPEG=ROWS[0][1];let GAPS=BETWEEN,NS=GAPS.length,onPeg=false;
+const $=id=>document.getElementById(id),cv=$('cv'),ctx=cv.getContext('2d'),sc=document.createElement('canvas');
+sc.width=CW;sc.height=CH;
+let spot=4,n=10,busy=false,M,balls=[],NT=30;
+const clear=()=>{M=Array.from({length:NS},()=>Array(7).fill(0))};clear();
+function mk(){$('strip').innerHTML='';GAPS.forEach((g,k)=>{const b=document.createElement('button');b.textContent=k+1;b.style.left=`calc(${g/CW*100}% - 3.3%)`;
+ b.onclick=()=>{if(busy)return;spot=k;clear();ui();go()};$('strip').append(b)})}
+mk();
+[1,10,100].forEach(v=>{const b=document.createElement('button');b.textContent=v;b.onclick=()=>{if(busy)return;n=v;$('custom').value='';ui()};$('nums').append(b)});
+['Between pegs','On a peg'].forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{if(busy)return;onPeg=i===1;GAPS=onPeg?ONPEG:BETWEEN;NS=GAPS.length;spot=Math.min(spot,NS-1);balls=[];clear();mk();ui();go()};$('mode').append(b)});
+$('custom').oninput=()=>{const m=$('custom').value.toLowerCase().replace(/[,\s]/g,'').match(/^(\d*\.?\d*)([km]?)$/),v=m?Math.floor((+m[1]||0)*(m[2]==='k'?1e3:m[2]==='m'?1e6:1)):0;if(v>=1)n=Math.min(v,1000000);ui()};
+function ui(){[...$('mode').children].forEach((b,i)=>b.classList.toggle('on',(i===1)===onPeg));[...$('strip').children].forEach((b,i)=>b.classList.toggle('on',i===spot));[...$('nums').children].forEach((b,i)=>b.classList.toggle('on',[1,10,100][i]===n&&!$('custom').value))}
+function build(){const c=sc.getContext('2d');c.translate(0,-OY);
+ c.fillStyle='#3a4190';c.fillRect(60,OY,125,CH);c.fillRect(1280,OY,130,CH);
+ c.fillStyle='#232852';c.fillRect(185,OY,1095,CH);
+ c.fillStyle='#161a3a';for(let y=440;y<2170;y+=53)for(let x=210;x<1270;x+=53){c.beginPath();c.arc(x,y,7,0,7);c.fill()}
+ c.fillStyle='#f4c986';c.strokeStyle='#b98a4e';c.lineWidth=4;
+ ROWS.forEach(([y,xs])=>xs.forEach(x=>{c.beginPath();c.arc(x,y,15,0,7);c.fill();c.stroke()}));
+ c.fillStyle='#5560c4';D.forEach(d=>c.fillRect(d-18,2185,36,240));
+ c.fillStyle='#3a4190';c.fillRect(60,2425,1350,15);
+ c.textAlign='center';for(let j=0;j<7;j++){const m=(E[j]+E[j+1])/2;c.fillStyle='#ffe66b';c.fillRect(m-62,2205,124,92);c.fillStyle='#222';c.font='bold 70px system-ui';c.fillText(j+1,m,2278)}}
+function nxt(xs,x,d){const L=xs.filter(v=>v<x),R=xs.filter(v=>v>x);if(d<0&&!L.length)d=1;if(d>0&&!R.length)d=-1;return d<0?Math.max(...L):Math.min(...R)}
+function sim(k,rec=true){const gx=GAPS[k];let x=gx+(Math.random()-.5)*16,y=OY+20,vx=(Math.random()-.5)*20,vy=0;
+ const pts=[[x,y]],dt=1/300,g=5000,e=.75,RB=26,rr=RB+15;
+ for(let s=0;s<9000&&y<2195;s++){vy+=g*dt;vx*=.9985;vy*=.9985;x+=vx*dt;y+=vy*dt;
+  for(const r of ROWS){if(Math.abs(y-r[0])>rr)continue;for(const px of r[1]){const dx=x-px;if(dx>rr||dx<-rr)continue;const dy=y-r[0],d2=dx*dx+dy*dy;
+   if(d2<rr*rr&&d2>0){const d=Math.sqrt(d2);let nx=dx/d,ny=dy/d;const a=(Math.random()-.5)*.12,c=Math.cos(a),sn=Math.sin(a);{const tx=nx*c-ny*sn;ny=nx*sn+ny*c;nx=tx}
+    const vn=vx*nx+vy*ny;if(vn<0){vx-=(1+e)*vn*nx;vy-=(1+e)*vn*ny}x=px+nx*rr;y=r[0]+ny*rr}}}
+  if(x<185+RB){x=185+RB;vx=Math.abs(vx)*e}else if(x>1280-RB){x=1280-RB;vx=-Math.abs(vx)*e}
+  if(rec&&s%9===0)pts.push([x,y])}
+ if(rec)pts.push([x,2240]);
+ return{pts,k,slot:D.filter(d=>d<x).length}}
+function draw(){const now=performance.now();let counted=false;
+ for(const b of balls){if(!b.done&&(now-b.t0)/NT>=b.pts.length-1){b.done=1;if(!b.vis)M[b.k][b.slot]++;counted=true}}
+ ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(sc,0,0);ctx.setTransform(1,0,0,1,0,-OY);
+ ctx.fillStyle='#ff7a59';ctx.beginPath();ctx.arc(GAPS[spot],OY+20,24,0,7);ctx.fill();
+ ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 70px system-ui';
+ for(let j=0;j<7;j++)ctx.fillText(M[spot][j],(E[j]+E[j+1])/2,2400);
+ for(const b of balls){const t=(now-b.t0)/NT;if(t<0||b.done)continue;const i=Math.floor(t),f=t-i,a=b.pts[i],c=b.pts[i+1];
+  ctx.fillStyle='#ff7a59';ctx.strokeStyle='#fff';ctx.lineWidth=5;ctx.beginPath();ctx.arc(a[0]+(c[0]-a[0])*f,a[1]+(c[1]-a[1])*f,26,0,7);ctx.fill();ctx.stroke()}
+ balls=balls.filter(b=>!b.done);if(!balls.length&&busy){busy=false;$('drop').disabled=false;$('skip').style.display='none';go()}
+ if(balls.length)requestAnimationFrame(draw)}
+function go(){ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(sc,0,0);ctx.setTransform(1,0,0,1,0,-OY);
+ ctx.fillStyle='#ff7a59';ctx.beginPath();ctx.arc(GAPS[spot],OY+20,24,0,7);ctx.fill();ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 70px system-ui';
+ for(let j=0;j<7;j++)ctx.fillText(M[spot][j],(E[j]+E[j+1])/2,2400);
+ const t=M[spot].reduce((a,c)=>a+c,0);$('sum').textContent=`Drop spot ${spot+1}: ${t} ball${t===1?'':'s'} dropped`}
+function table(){let h='<tr><th>Spot</th>'+PTS.map((p,j)=>`<th>Slot ${j+1}<br><small>${p} pts</small></th>`).join('')+'<th>Total</th></tr>';
+ M.forEach((r,k)=>{const mx=Math.max(1,...r);h+=`<tr><th${k===spot?' style="color:var(--acc2)"':''}>${k+1}</th>`+r.map(c=>`<td style="background:rgba(255,211,122,${(c/mx*.4).toFixed(2)})">${c||'·'}</td>`).join('')+`<td><b>${r.reduce((a,c)=>a+c,0)}</b></td></tr>`});
+ $('tbl').innerHTML=h}
+$('drop').onclick=()=>{if(busy)return;clear();if(n>5000){startBig();return}
+ {busy=true;$('drop').disabled=true;const f=Math.max(1,n/10);NT=30/f;const gap=260/f,t=performance.now();for(let i=0;i<n;i++){const s=sim(spot);s.t0=t+i*gap;balls.push(s)}$('skip').style.display=n>10?'block':'none';requestAnimationFrame(draw)}};
+const CACHE={};let bigJob=null;
+function startBig(){const k=spot,nn=n,CAP=20000,key=onPeg+'-'+k,start=performance.now();
+ let cnt=CACHE[key]?CACHE[key].slice():Array(7).fill(0),done=CACHE[key]?CAP:0;
+ const vis=[];for(let i=0;i<100;i++)vis.push(sim(k,true));
+ busy=true;$('drop').disabled=true;$('skip').style.display='block';NT=30/8;
+ let vi=0,last=performance.now();const job={stop:false};bigJob=job;
+ const launch=()=>{const s=vis[vi++%vis.length];balls.push({pts:s.pts,k:k,slot:s.slot,t0:performance.now(),vis:1})};
+ const finish=()=>{job.stop=true;bigJob=null;if(done<1){cnt[sim(k,false).slot]++;done=1}
+  let fin;if(done===nn)fin=cnt.slice();else{fin=Array(7).fill(0);const cum=[];let a=0;cnt.forEach(c=>{a+=c;cum.push(a)});for(let i=0;i<nn;i++){const r=Math.random()*a;let j=0;while(r>=cum[j])j++;fin[j]++}}
+  if(done>=CAP)CACHE[key]=cnt.slice();M[k]=fin;balls=[];busy=false;$('drop').disabled=false;$('skip').style.display='none';go()};
+ job.skip=finish;launch();requestAnimationFrame(draw);
+ const step=()=>{if(job.stop)return;const t0=performance.now(),target=Math.min(nn,CAP);
+  while(done<target&&performance.now()-t0<10){for(let i=0;i<40&&done<target;i++){cnt[sim(k,false).slot]++;done++}}
+  if(done>0)M[k]=cnt.map(c=>Math.round(c*nn/done));
+  if(performance.now()-last>35){launch();last=performance.now()}
+  if(done>=target&&performance.now()-start>1500)finish();else requestAnimationFrame(step)};
+ requestAnimationFrame(step)}
+$('skip').onclick=()=>{if(bigJob){bigJob.skip();return}for(const b of balls)if(!b.done)M[b.k][b.slot]++;balls=[];busy=false;$('drop').disabled=false;$('skip').style.display='none';go()};
+$('reset').onclick=()=>{if(bigJob){bigJob.stop=true;bigJob=null}$('skip').style.display='none';balls=[];busy=false;$('drop').disabled=false;clear();go()};
+build();ui();go();
+</script></body></html>
